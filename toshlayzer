@@ -1,0 +1,46 @@
+#!/usr/bin/env python
+"""Toshlayzer - analyze your Toshl CSV exports
+
+Usage:
+	./toshlyzer predict YEAR MONTHS_AGO [options] FILE
+
+Options:
+   --plain                    Output in plain format
+   -h --help                  Show this screen.
+   --version                  Show version.
+   --exception_mode=EX_MODE   Set exception mode.
+"""
+import os
+import sys
+import codecs
+import csv
+
+from docopt import docopt
+
+from lib import Config, Table
+from lib.display import Plain, Plot
+
+ROOT_PATH = os.path.dirname(os.path.realpath(__file__))
+
+if __name__ == '__main__':
+	arguments = docopt(__doc__, version='0.1')
+	
+	config = Config(os.path.join(ROOT_PATH, 'env/config.json'), arguments)
+
+	filepath = arguments.get('FILE')
+	input_stream = filepath and codecs.open(filepath, encoding='utf-8-sig') or sys.stdin
+
+	table = Table(config=config)
+	csv_data = csv.reader(input_stream, delimiter=',', quotechar='"')
+	header = next(csv_data)
+	for row in csv_data:
+		table.add_row(header, [val for val in row])
+
+	if config.is_plain:
+		display = Plain(config, table)
+	else:
+		display = Plot(config, table)
+	
+	if arguments['predict']:
+		months_ago = int(arguments['MONTHS_AGO']) if arguments['MONTHS_AGO'] else None
+		display.project_year(int(arguments['YEAR']), months_ago=months_ago)
