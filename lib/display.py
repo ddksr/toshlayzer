@@ -1,6 +1,9 @@
 from datetime import date
 import time
 
+import numpy as np
+import matplotlib.pyplot as plt
+
 def date_months_ago(n):
 	now = time.localtime()
 	y, m = time.localtime(time.mktime((now.tm_year, now.tm_mon - n, 1, 0, 0, 0, 0, 0, 0)))[:2]
@@ -22,7 +25,7 @@ def aggregate_tuples(lst):
 		agg[key] += val
 	return agg
 
-class Display:
+class Calculation:
 	def __init__(self, config, table):
 		self.config = config
 		self.table = table
@@ -50,7 +53,7 @@ class Display:
 		
 		return months, predictions
 
-class Plain(Display):
+class Plain(Calculation):
 	def _row(self, row, cell_widths):
 		print('|', end='')
 		for i, cell in enumerate(row):
@@ -112,5 +115,34 @@ class Plain(Display):
 			for r in rows
 		])
 
-class Plot(Display):
-	pass
+class Plot(Calculation):
+	def project_year(self, year, months_ago=None):
+		months, predictions = super().project_year(year, months_ago=months_ago)
+
+		x = np.arange(1, 13)
+		y = []
+		planned_expenses = aggregate_tuples(
+			(int(val['date'].split('-')[1]), float(val['value']))
+			for val in self.config.plans['expenses']
+		)
+		planned_income = aggregate_tuples(
+			(int(val['date'].split('-')[1]), float(val['value']))
+			for val in self.config.plans['income']
+		)
+		prev = 0
+		for m in range(1, 13):
+			values = months.get(m)
+			planned = planned_income.get(m, 0) - planned_expenses.get(m, 0)
+			if values:
+				overall = prev + sum(values) + planned
+			else:
+				overall = prev + predictions[m] + planned
+			
+			y.append(overall)
+			prev = overall
+
+		y = np.array(y)
+		
+		plt.plot(x, y)
+		plt.show()
+		
