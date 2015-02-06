@@ -75,7 +75,8 @@ class Calculation:
 		for t in self.table.filtered(from_date=date(year, 1, 1)):
 			months.setdefault(t.date().month, []).append(t.val())
 
-		income, expenses = self.config.income or 0., self.config.expenses or 0.
+		income, expenses = self.config.income, self.config.expenses
+		
 		planned_expenses = aggregate_tuples(
 			(int(val['date'].split('-')[1]), float(val['value']), set(val['tags']))
 			for val in self.config.plans['expenses']
@@ -99,7 +100,7 @@ class Calculation:
 				income_delta = abs(self.config.income_factor * goal)
 				expenses_delta = abs(self.config.expenses_factor * goal)
 				new_income = min(income + income_delta, self.config.max_income)
-				new_expenses = min(self.config.min_expenses, expenses + expenses_delta)
+				new_expenses = max(self.config.min_expenses, expenses + expenses_delta)
 
 				# add previous months
 				overall += (new_income - income)*(m-1) 
