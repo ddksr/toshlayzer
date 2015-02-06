@@ -87,6 +87,7 @@ class Calculation:
 		)
 		
 		overall = 0
+		last_real_month=0
 		for m in range(1, 13):
 			values = months.get(m)
 			overall += planned_income.get(m, [0])[0]
@@ -95,6 +96,7 @@ class Calculation:
 				budget = income + expenses
 			else:
 				budget = sum(values)
+				last_real_month = m
 			while (overall + budget) < self.config.min_balance:
 				goal = overall - self.config.min_balance
 				income_delta = abs(self.config.income_factor * goal)
@@ -103,8 +105,8 @@ class Calculation:
 				new_expenses = max(self.config.min_expenses, expenses + expenses_delta)
 
 				# add previous months
-				overall += (new_income - income)*(m-1) 
-				overall += (new_expenses - expenses)*(m-1)
+				overall += (new_income - income)*(m-last_real_month)
+				overall += (abs(expenses) - abs(new_expenses))*(m-last_real_month)
 				income, expenses = new_income, new_expenses
 				budget = income + expenses
 				

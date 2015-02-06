@@ -14,7 +14,9 @@ class Config:
 		'exception_mode': '--exception_mode',
 		'income_factor': '--income_factor',
 		'expenses_factor': '--expenses_factor',
-		'min_balance': '--min_balance'
+		'min_balance': '--min_balance',
+		'max_income': '--max_income',
+		'min_expenses': '--min_expenses',
 	}
 	
 	def __init__(self, config, arguments={}):
