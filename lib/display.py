@@ -20,9 +20,10 @@ def negative(lst):
 
 def aggregate_tuples(lst):
 	agg = {}
-	for key, val in lst:
-		if key not in agg: agg[key] = 0
-		agg[key] += val
+	for key, val, names in lst:
+		if key not in agg: agg[key] = [0, set()]
+		agg[key][0] += val
+		agg[key][1] |= names
 	return agg
 
 class Calculation:
@@ -41,7 +42,7 @@ class Calculation:
 													till_date=date(year, month, 1),
 													ignore_savings=True):
 				history.setdefault(t.date().month, []).append(t.val())
-			return avg([sum(vals) for vals in history.values()] or [float('inf')])
+			return avg([sum(vals) for vals in history.values()])
 		
 		for t in self.table.filtered(from_date=date(year, 1, 1)):
 			months.setdefault(t.date().month, []).append(t.val())
@@ -54,10 +55,14 @@ class Calculation:
 		return months, predictions
 
 class Plain(Calculation):
-	def _row(self, row, cell_widths):
+	ALIGN_RIGHT='>'
+	ALIGN_LEFT='<'
+	ALIGN_CENTER='^'
+	
+	def _row(self, row, cell_widths, align=ALIGN_RIGHT):
 		print('|', end='')
 		for i, cell in enumerate(row):
-			print((' {:' + str(cell_widths[i]) + '} ').format(cell), end='')
+			print((' {:' + align + str(cell_widths[i]) + '} ').format(cell), end='')
 			print('|', end='')
 		print('')
 
@@ -66,15 +71,23 @@ class Plain(Calculation):
 
 	def _money(self, val):
 		return '{:.2f}'.format(val) if val else '?'
-		
-	def _table(self, header, rows):
+
+	def _title(self, title, width):
+		print('#' * (int((width-len(title))/2) - 1), end='')
+		print(' {} '.format(title), end='')
+		print('#' * (int((width-len(title))/2) - 1), end='')
+		print('#' if width%2==0 else '', end='\n')
+	
+	def _table(self, title, header, rows):
 		cells = len(header)
 		cell_widths = [
 			max(len(str(row[i])) for row in rows + [header]) for i in range(cells)
 		]
 		width = sum(cell_widths) + (3*cells +1)
+
+		self._title(title, width)
 		self._hline(width)
-		self._row(header, cell_widths)
+		self._row(header, cell_widths, align=Plain.ALIGN_CENTER)
 		self._hline(width)
 		for row in rows:
 			self._row(row, cell_widths)
@@ -86,32 +99,41 @@ class Plain(Calculation):
 		rows = []
 		prev = 0
 		planned_expenses = aggregate_tuples(
-			(int(val['date'].split('-')[1]), float(val['value']))
+			(int(val['date'].split('-')[1]), float(val['value']), set(val['tags']))
 			for val in self.config.plans['expenses']
 		)
 		planned_income = aggregate_tuples(
-			(int(val['date'].split('-')[1]), float(val['value']))
+			(int(val['date'].split('-')[1]), float(val['value']), set(val['tags']))
 			for val in self.config.plans['income']
 		)
 		for m in range(1, 13):
 			values = months.get(m)
-			planned = planned_income.get(m, 0) - planned_expenses.get(m, 0)
+			planned_pos_m = planned_income.get(m, [0, []])
+			planned_neg_m = planned_expenses.get(m, [0, []])
+			planned = planned_pos_m[0] - planned_neg_m[0]
+			planned_desc = list(
+				map(lambda name: '+' + name, planned_pos_m[1])
+			) + list(
+				map(lambda name: '-' + name, planned_neg_m[1])
+			)
+
 			if values:
 				overall = prev + sum(values) + planned
-				row = (m, overall, sum(positive(values)), sum(negative(values)), planned)
+				row = (m, overall, sum(positive(values)), sum(negative(values)),
+					   planned, planned_desc)
 			else:
 				overall = prev + predictions[m] + planned
-				row = (m, overall, None, None, planned)
+				row = (m, overall, None, None,
+					   planned, planned_desc)
 			
 			rows.append(row)
 			prev = overall
 
-		
-		print('Year projection')
-		
-		self._table(['Date', 'Balance', 'Income', 'Expenses', 'Planned'], [
+		header = ['Date', 'Balance', 'Income', 'Expenses', 'Planned', 'Desc.']
+		self._table('Yearly projection', header, [
 			('{}-{:02}'.format(year, r[0]),
-			 self._money(r[1]), self._money(r[2]), self._money(r[3]), self._money(r[4]), )
+			 self._money(r[1]), self._money(r[2]), self._money(r[3]), self._money(r[4]),
+			 ', '.join(r[5]))
 			for r in rows
 		])
 
