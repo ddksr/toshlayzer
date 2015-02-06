@@ -98,13 +98,13 @@ class Calculation:
 				goal = overall - self.config.min_balance
 				income_delta = abs(self.config.income_factor * goal)
 				expenses_delta = abs(self.config.expenses_factor * goal)
-				
-				income += income_delta
-				expenses += expenses_delta
+				new_income = min(income + income_delta, self.config.max_income)
+				new_expenses = min(self.config.min_expenses, expenses + expenses_delta)
 
 				# add previous months
-				overall += income_delta*(m-1) 
-				overall += expenses_delta*(m-1)
+				overall += (new_income - income)*(m-1) 
+				overall += (new_expenses - expenses)*(m-1)
+				income, expenses = new_income, new_expenses
 				budget = income + expenses
 				
 			overall += budget
@@ -127,7 +127,7 @@ class Plain(Calculation):
 		print('*' + '-' * (w - 2) + '*')
 
 	def _money(self, val):
-		return '{:.2f}'.format(val) if val else '?'
+		return '{:.2f}'.format(val) if val is not None else '?'
 
 	def _title(self, title, width):
 		print('#' * (int((width-len(title))/2) - 1), end='')
@@ -196,9 +196,11 @@ class Plain(Calculation):
 
 	def fit_year(self, year):
 		income, expenses = super().fit_year(year)
-		print('Best monthly income:', self._money(income))
-		print('Best monthly expenses:', self._money(expenses))
-		print('Minimum balance fitted:', self._money(self.config.min_balance))
+		print('## Best monthly income:', self._money(income))
+		print('## Best monthly expenses:', self._money(expenses))
+		print('## Minimum balance fitted:', self._money(self.config.min_balance))
+		print('## Maximum income fitted:', self._money(self.config.max_income))
+		print('## Minimum expenses fitted:', self._money(self.config.min_expenses))
 		self.project_year(year, income=income, expenses=expenses)
 
 class Plot(Calculation):

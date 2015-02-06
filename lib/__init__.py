@@ -35,6 +35,8 @@ class Config:
 		self.income = None
 		self.expenses = None
 		self.min_balance = 0.
+		self.max_income = 0.
+		self.min_expenses = 0.
 		
 		self.__dict__.update({
 			dict: lambda c: c,
@@ -61,7 +63,8 @@ class Config:
 			if val:
 				self.__dict__[opt] = type(self.__dict__[opt])(val)
 
-
+		self.min_expenses = - abs(float(self.min_expenses))
+		
 		if self.expenses is not None:
 			self.expenses = - abs(float(self.expenses))
 		if self.income is not None:
