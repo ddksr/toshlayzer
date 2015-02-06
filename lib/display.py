@@ -35,14 +35,24 @@ class Calculation:
 		months = {}
 
 		start_date = date_months_ago(months_ago) if months_ago else date(year, 1, 1)
-		
+
 		def predict(month):
 			history = {}
 			for t in self.table.filtered_no_ignored(from_date=start_date,
 													till_date=date(year, month, 1),
 													ignore_savings=True):
 				history.setdefault(t.date().month, []).append(t.val())
-			return avg([sum(vals) for vals in history.values()])
+
+			if self.config.income is None and self.config.expenses is None:
+				return avg([sum(vals) for vals in history.values()])
+			
+			neg = self.config.expenses if self.config.expenses is not None else avg([
+				sum(v for v in vals if v < 0) for vals in history.values()
+			])
+			poz = self.config.income if self.config.income is not None else avg([
+				sum(v for v in vals if v > 0) for vals in history.values()
+			])
+			return poz + neg
 		
 		for t in self.table.filtered(from_date=date(year, 1, 1)):
 			months.setdefault(t.date().month, []).append(t.val())
@@ -93,8 +103,8 @@ class Plain(Calculation):
 			self._row(row, cell_widths)
 		self._hline(width)
 
-	def project_year(self, year, months_ago=None):
-		months, predictions = super().project_year(year, months_ago=months_ago)
+	def project_year(self, year, **kwargs):
+		months, predictions = super().project_year(year, **kwargs)
 		
 		rows = []
 		prev = 0
@@ -138,23 +148,25 @@ class Plain(Calculation):
 		])
 
 class Plot(Calculation):
-	def project_year(self, year, months_ago=None):
-		months, predictions = super().project_year(year, months_ago=months_ago)
+	def project_year(self, year, **kwargs):
+		months, predictions = super().project_year(year, **kwargs)
 
 		x = np.arange(1, 13)
 		y = []
 		planned_expenses = aggregate_tuples(
-			(int(val['date'].split('-')[1]), float(val['value']))
+			(int(val['date'].split('-')[1]), float(val['value']), set(val['tags']))
 			for val in self.config.plans['expenses']
 		)
 		planned_income = aggregate_tuples(
-			(int(val['date'].split('-')[1]), float(val['value']))
+			(int(val['date'].split('-')[1]), float(val['value']), set(val['tags']))
 			for val in self.config.plans['income']
 		)
 		prev = 0
 		for m in range(1, 13):
 			values = months.get(m)
-			planned = planned_income.get(m, 0) - planned_expenses.get(m, 0)
+			planned_pos_m = planned_income.get(m, [0, []])
+			planned_neg_m = planned_expenses.get(m, [0, []])
+			planned = planned_pos_m[0] - planned_neg_m[0]
 			if values:
 				overall = prev + sum(values) + planned
 			else:

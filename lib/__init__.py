@@ -29,8 +29,9 @@ class Config:
 			'income': [], # which tags come from savings
 			'expenses': [], # which tags are transactions to savings
 		}
-		
-		self.is_plain = arguments.get('display_mode')
+		self.is_plain = False
+		self.income = None
+		self.expenses = None		
 		
 		self.__dict__.update({
 			dict: lambda c: c,
@@ -47,6 +48,15 @@ class Config:
 				else:
 					new_vals.append(val)
 			self.exceptions[ex_type] = new_vals
+
+		if arguments.get('--plain'):
+			self.is_plain = True
+		self.income = arguments.get('--income', None)
+		if self.income is not None:
+			self.income = float(self.income)
+		self.expenses = arguments.get('--expenses', None)
+		if self.expenses is not None:
+			self.expenses = - float(self.expenses)
 
 		for opt, key in Config.ARG_OPTIONS.items():
 			val = arguments.get(key)
