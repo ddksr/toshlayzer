@@ -3,14 +3,18 @@
 
 Usage:
 	./toshlyzer predict YEAR MONTHS_AGO [options] FILE
+    ./toshlyzer fit YEAR [options] FILE
 
 Options:
    --plain                    Output in plain format
    -h --help                  Show this screen.
    --version                  Show version.
    --exception_mode=EX_MODE   Set exception mode.
-   --income=INCOME            Planned income
-   --expenses=EXPENSES        Planned expenses
+   --income=INCOME            Planned income.
+   --expenses=EXPENSES        Planned expenses.
+   --income_factor=IN_FAC     Income factor.
+   --expenses_factor=EX_FAC   Expense factor.
+   --min_balance=BALANCE      Minimum balance.
 """
 import os
 import sys
@@ -46,3 +50,5 @@ if __name__ == '__main__':
 	if arguments['predict']:
 		months_ago = int(arguments['MONTHS_AGO']) if arguments['MONTHS_AGO'] else None
 		display.project_year(int(arguments['YEAR']), months_ago=months_ago)
+	elif arguments['fit']:
+		display.fit_year(int(arguments['YEAR']))

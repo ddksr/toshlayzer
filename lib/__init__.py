@@ -11,8 +11,10 @@ class Config:
 	TEMPLATE_EXCEPTION = lambda: { 'tag': '', 'mode': None }
 
 	ARG_OPTIONS = {
-		'is_plain': '--plain',
-		'exception_mode': 'EX_MODE'
+		'exception_mode': '--exception_mode',
+		'income_factor': '--income_factor',
+		'expenses_factor': '--expenses_factor',
+		'min_balance': '--min_balance'
 	}
 	
 	def __init__(self, config, arguments={}):
@@ -31,7 +33,8 @@ class Config:
 		}
 		self.is_plain = False
 		self.income = None
-		self.expenses = None		
+		self.expenses = None
+		self.min_balance = 0.
 		
 		self.__dict__.update({
 			dict: lambda c: c,
@@ -49,19 +52,21 @@ class Config:
 					new_vals.append(val)
 			self.exceptions[ex_type] = new_vals
 
-		if arguments.get('--plain'):
-			self.is_plain = True
-		self.income = arguments.get('--income', None)
-		if self.income is not None:
-			self.income = float(self.income)
-		self.expenses = arguments.get('--expenses', None)
-		if self.expenses is not None:
-			self.expenses = - float(self.expenses)
+		self.is_plain = arguments.get('--plain', self.is_plain)
+		self.income = arguments.get('--income', self.income)
+		self.expenses = arguments.get('--expenses', self.expenses)
 
 		for opt, key in Config.ARG_OPTIONS.items():
 			val = arguments.get(key)
 			if val:
-				self.__dict__[opt] = val
+				self.__dict__[opt] = type(self.__dict__[opt])(val)
+
+
+		if self.expenses is not None:
+			self.expenses = - abs(float(self.expenses))
+		if self.income is not None:
+			self.income = float(self.income)
+		
 
 	def __str__(self):
 		return 'Config({})'.format(str(self.__dict__))

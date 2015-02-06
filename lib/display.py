@@ -31,10 +31,15 @@ class Calculation:
 		self.config = config
 		self.table = table
 
-	def project_year(self, year, months_ago=None):
+	def project_year(self, year, months_ago=None, income=None, expenses=None):
 		months = {}
 
 		start_date = date_months_ago(months_ago) if months_ago else date(year, 1, 1)
+
+		if income is None:
+			income = self.config.income
+		if expenses is None:
+			expenses = self.config.expenses
 
 		def predict(month):
 			history = {}
@@ -43,13 +48,13 @@ class Calculation:
 													ignore_savings=True):
 				history.setdefault(t.date().month, []).append(t.val())
 
-			if self.config.income is None and self.config.expenses is None:
+			if income is None and expenses is None:
 				return avg([sum(vals) for vals in history.values()])
 			
-			neg = self.config.expenses if self.config.expenses is not None else avg([
+			neg = expenses if expenses is not None else avg([
 				sum(v for v in vals if v < 0) for vals in history.values()
 			])
-			poz = self.config.income if self.config.income is not None else avg([
+			poz = income if income is not None else avg([
 				sum(v for v in vals if v > 0) for vals in history.values()
 			])
 			return poz + neg
@@ -63,6 +68,48 @@ class Calculation:
 				predictions[m] = predict(m)
 		
 		return months, predictions
+
+	def fit_year(self, year):
+		months = {}
+		
+		for t in self.table.filtered(from_date=date(year, 1, 1)):
+			months.setdefault(t.date().month, []).append(t.val())
+
+		income, expenses = self.config.income or 0., self.config.expenses or 0.
+		planned_expenses = aggregate_tuples(
+			(int(val['date'].split('-')[1]), float(val['value']), set(val['tags']))
+			for val in self.config.plans['expenses']
+		)
+		planned_income = aggregate_tuples(
+			(int(val['date'].split('-')[1]), float(val['value']), set(val['tags']))
+			for val in self.config.plans['income']
+		)
+		
+		overall = 0
+		for m in range(1, 13):
+			values = months.get(m)
+			overall += planned_income.get(m, [0])[0]
+			overall -= planned_expenses.get(m, [0])[0]
+			if values is None:
+				budget = income + expenses
+			else:
+				budget = sum(values)
+			while (overall + budget) < self.config.min_balance:
+				goal = overall - self.config.min_balance
+				income_delta = abs(self.config.income_factor * goal)
+				expenses_delta = abs(self.config.expenses_factor * goal)
+				
+				income += income_delta
+				expenses += expenses_delta
+
+				# add previous months
+				overall += income_delta*(m-1) 
+				overall += expenses_delta*(m-1)
+				budget = income + expenses
+				
+			overall += budget
+			
+		return income, expenses
 
 class Plain(Calculation):
 	ALIGN_RIGHT='>'
@@ -147,6 +194,13 @@ class Plain(Calculation):
 			for r in rows
 		])
 
+	def fit_year(self, year):
+		income, expenses = super().fit_year(year)
+		print('Best monthly income:', self._money(income))
+		print('Best monthly expenses:', self._money(expenses))
+		print('Minimum balance fitted:', self._money(self.config.min_balance))
+		self.project_year(year, income=income, expenses=expenses)
+
 class Plot(Calculation):
 	def project_year(self, year, **kwargs):
 		months, predictions = super().project_year(year, **kwargs)
@@ -179,4 +233,4 @@ class Plot(Calculation):
 		
 		plt.plot(x, y)
 		plt.show()
-		
+
