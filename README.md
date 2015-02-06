@@ -4,7 +4,6 @@ Analyze toshl csv dumps
 Examples:
 
 	$ ./toshlayzer predict 2015 5 --plain --income=1800 --expenses=1000 toshl_example.csv
-
 	####################### Yearly projection ########################
 	*----------------------------------------------------------------*
 	|  Date   | Balance | Income  | Expenses | Planned  |   Desc.    |
@@ -22,6 +21,10 @@ Examples:
 	| 2015-11 | 3585.68 |       ? |        ? |  -500.00 |    -travel |
 	| 2015-12 | 4385.68 |       ? |        ? |        ? |            |
 	*----------------------------------------------------------------*
+
+
+	$ ./toshlayzer fit 2015 --expenses=550 --income=900 --max_income=1000 --min_balance=-200 --plain toshl_example.csv
+	## No solution found. Looks bad ...
 
 # Configuration
 Can also be overwritten with command line arguments.

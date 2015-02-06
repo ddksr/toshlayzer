@@ -98,15 +98,18 @@ class Calculation:
 				budget = sum(values)
 				last_real_month = m
 			while (overall + budget) < self.config.min_balance:
+				if expenses >= self.config.min_expenses and income >= self.config.max_income:
+					return None, None
+					
 				goal = overall - self.config.min_balance
 				income_delta = abs(self.config.income_factor * goal)
 				expenses_delta = abs(self.config.expenses_factor * goal)
 				new_income = min(income + income_delta, self.config.max_income)
-				new_expenses = max(self.config.min_expenses, expenses + expenses_delta)
+				new_expenses = min(self.config.min_expenses, expenses + expenses_delta)
 
 				# add previous months
 				overall += (new_income - income)*(m-last_real_month)
-				overall += (abs(expenses) - abs(new_expenses))*(m-last_real_month)
+				overall += (abs(expenses) - abs(new_expenses))*(m-last_real_month-1)
 				income, expenses = new_income, new_expenses
 				budget = income + expenses
 				
@@ -199,6 +202,9 @@ class Plain(Calculation):
 
 	def fit_year(self, year):
 		income, expenses = super().fit_year(year)
+		if not income and not expenses:
+			print("## No solution found. Looks bad ... ")
+			return
 		print('## Best monthly income:', self._money(income))
 		print('## Best monthly expenses:', self._money(expenses))
 		print('## Minimum balance fitted:', self._money(self.config.min_balance))

@@ -16,7 +16,7 @@ Options:
    --expenses_factor=EX_FAC   Expense factor.
    --min_balance=BALANCE      Minimum balance.
    --max_income=MAX_INCOME    Maximum income.
-   --in_expenses=MIN_EXP      Minimum expenses
+   --min_expenses=MIN_EXP     Minimum expenses
 """
 import os
 import sys
