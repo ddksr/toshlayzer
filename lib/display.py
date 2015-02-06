@@ -15,6 +15,13 @@ def positive(lst):
 def negative(lst):
 	return [x for x in lst if x < 0]
 
+def aggregate_tuples(lst):
+	agg = {}
+	for key, val in lst:
+		if key not in agg: agg[key] = 0
+		agg[key] += val
+	return agg
+
 class Display:
 	def __init__(self, config, table):
 		self.config = config
@@ -36,20 +43,12 @@ class Display:
 		for t in self.table.filtered(from_date=date(year, 1, 1)):
 			months.setdefault(t.date().month, []).append(t.val())
 
-		rows = []
-		prev = 0
+		predictions = {}
 		for m in range(1, 13):
-			values = months.get(m)
-			if values:
-				overall = prev + sum(values)
-				rows.append((m, overall, sum(positive(values)), sum(negative(values)), ))
-			else:
-				overall = prev + predict(m)
-				rows.append((m, overall, None, None, ))
-			
-			
-			prev = overall
-		return rows
+			if not months.get(m):
+				predictions[m] = predict(m)
+		
+		return months, predictions
 
 class Plain(Display):
 	def _row(self, row, cell_widths):
@@ -79,10 +78,37 @@ class Plain(Display):
 		self._hline(width)
 
 	def project_year(self, year, months_ago=None):
+		months, predictions = super().project_year(year, months_ago=months_ago)
+		
+		rows = []
+		prev = 0
+		planned_expenses = aggregate_tuples(
+			(int(val['date'].split('-')[1]), float(val['value']))
+			for val in self.config.plans['expenses']
+		)
+		planned_income = aggregate_tuples(
+			(int(val['date'].split('-')[1]), float(val['value']))
+			for val in self.config.plans['income']
+		)
+		for m in range(1, 13):
+			values = months.get(m)
+			planned = planned_income.get(m, 0) - planned_expenses.get(m, 0)
+			if values:
+				overall = prev + sum(values) + planned
+				row = (m, overall, sum(positive(values)), sum(negative(values)), planned)
+			else:
+				overall = prev + predictions[m] + planned
+				row = (m, overall, None, None, planned)
+			
+			rows.append(row)
+			prev = overall
+
+		
 		print('Year projection')
-		rows = super().project_year(year, months_ago=months_ago)
-		self._table(['Date', 'Balance', '+', '-'], [
-			('{}-{:02}'.format(year, r[0]), self._money(r[1]), self._money(r[2]), self._money(r[3]), )
+		
+		self._table(['Date', 'Balance', 'Income', 'Expenses', 'Planned'], [
+			('{}-{:02}'.format(year, r[0]),
+			 self._money(r[1]), self._money(r[2]), self._money(r[3]), self._money(r[4]), )
 			for r in rows
 		])
 
