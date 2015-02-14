@@ -3,6 +3,7 @@ import time
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.ticker as tck
 
 def date_months_ago(n):
 	now = time.localtime()
@@ -49,7 +50,11 @@ class Calculation:
 				history.setdefault(t.date().month, []).append(t.val())
 
 			if income is None and expenses is None:
-				return avg([sum(vals) for vals in history.values()])
+				return (
+					avg([sum(vals) for vals in history.values()]),
+					avg([sum(v for v in vals if v > 0) for vals in history.values()]),
+					avg([sum(v for v in vals if v < 0) for vals in history.values()]),
+				)
 			
 			neg = expenses if expenses is not None else avg([
 				sum(v for v in vals if v < 0) for vals in history.values()
@@ -57,7 +62,7 @@ class Calculation:
 			poz = income if income is not None else avg([
 				sum(v for v in vals if v > 0) for vals in history.values()
 			])
-			return poz + neg
+			return poz + neg, poz, neg
 		
 		for t in self.table.filtered(from_date=date(year, 1, 1)):
 			months.setdefault(t.date().month, []).append(t.val())
@@ -185,8 +190,8 @@ class Plain(Calculation):
 				row = (m, overall, sum(positive(values)), sum(negative(values)),
 					   planned, planned_desc)
 			else:
-				overall = prev + predictions[m] + planned
-				row = (m, overall, None, None,
+				overall = prev + predictions[m][0] + planned
+				row = (m, overall, predictions[m][1], predictions[m][2],
 					   planned, planned_desc)
 			
 			rows.append(row)
@@ -215,9 +220,11 @@ class Plain(Calculation):
 class Plot(Calculation):
 	def project_year(self, year, **kwargs):
 		months, predictions = super().project_year(year, **kwargs)
-
+		
 		x = np.arange(1, 13)
-		y = []
+		y_budget = []
+		y_income = []
+		y_expense = []
 		planned_expenses = aggregate_tuples(
 			(int(val['date'].split('-')[1]), float(val['value']), set(val['tags']))
 			for val in self.config.plans['expenses']
@@ -234,14 +241,31 @@ class Plot(Calculation):
 			planned = planned_pos_m[0] - planned_neg_m[0]
 			if values:
 				overall = prev + sum(values) + planned
+				poz = abs(sum(v for v in values if v > 0) + planned_pos_m[0])
+				neg = abs(sum(v for v in values if v < 0) - planned_neg_m[0])
 			else:
-				overall = prev + predictions[m] + planned
+				overall = prev + predictions[m][0] + planned
+				poz = predictions[m][1]  + planned_pos_m[0]
+				neg = abs(predictions[m][1]  - planned_neg_m[0])
 			
-			y.append(overall)
+			y_budget.append(overall)
+			y_income.append(poz)
+			y_expense.append(neg)
 			prev = overall
 
-		y = np.array(y)
-		
-		plt.plot(x, y)
+		f, ax = plt.subplots()
+		ax.plot(x, np.array(y_budget), 'b', label='Budget')
+		ax.plot(x, np.array(y_income), 'g', label='Income')
+		ax.plot(x, np.array(y_expense), 'r', label='Expenses')
+		plt.xlabel('Month')
+		plt.ylabel('EUR')
+		ax.xaxis.set_ticks(np.arange(1, 13))
+		ax.legend()
+		ax.axis((
+			1, 12, -1000, max(max(y_budget), max(y_income), max(y_expense)) + 1000
+		))
 		plt.show()
 
+	def fit_year(self, year, **kwargs):
+		income, expenses = super().fit_year(year)
+		months, predictions = super().project_year(year, income=income, expenses=expenses **kwargs)
