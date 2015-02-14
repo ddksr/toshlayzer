@@ -240,13 +240,13 @@ class Plot(Calculation):
 			planned_neg_m = planned_expenses.get(m, [0, []])
 			planned = planned_pos_m[0] - planned_neg_m[0]
 			if values:
-				overall = prev + sum(values) + planned
 				poz = abs(sum(v for v in values if v > 0) + planned_pos_m[0])
 				neg = abs(sum(v for v in values if v < 0)) + abs(planned_neg_m[0])
+				overall = prev + sum(values) + planned
 			else:
 				poz = abs(income if income is not None else predictions[m][1]) + planned_pos_m[0]
 				neg = abs(expenses if expenses is not None else predictions[m][2]) + abs(planned_neg_m[0])
-				overall = prev + poz - neg + planned
+				overall = prev + poz - neg
 			
 			y_budget.append(overall)
 			y_income.append(poz)
@@ -262,7 +262,7 @@ class Plot(Calculation):
 		ax.xaxis.set_ticks(np.arange(1, 13))
 		ax.legend()
 		ax.axis((
-			1, 12, min(min(y_budget), min(y_income), min(y_expense)) + 1000 -1000, max(max(y_budget), max(y_income), max(y_expense)) + 1000
+			1, 12, min(min(y_budget), min(y_income), min(y_expense)) -1000, max(max(y_budget), max(y_income), max(y_expense)) + 1000
 		))
 		plt.show()
 
