@@ -27,6 +27,10 @@ def aggregate_tuples(lst):
 		agg[key][1] |= names
 	return agg
 
+def ind(fun, lst):
+	fit = fun(lst)
+	return [val for val in enumerate(lst) if val[1] == fit][0]
+
 class Calculation:
 	def __init__(self, config, table):
 		self.config = config
@@ -254,16 +258,43 @@ class Plot(Calculation):
 			prev = overall
 
 		f, ax = plt.subplots()
-		ax.plot(x, np.array(y_budget), 'b', label='Budget')
-		ax.plot(x, np.array(y_income), 'g', label='Income')
-		ax.plot(x, np.array(y_expense), 'r', label='Expenses')
+
+		lineopts = {
+			'linewidth': 4,
+		}
+
 		plt.xlabel('Month')
 		plt.ylabel('EUR')
+		plt.title('Yearly predictions')
+		
+		ax.plot(x, np.array(y_budget), 'b', label='Budget', **lineopts)
+		ax.plot(x, np.array(y_income), 'g', label='Income', **lineopts)
+		ax.plot(x, np.array(y_expense), 'r', label='Expenses', **lineopts)
+
 		ax.xaxis.set_ticks(np.arange(1, 13))
-		ax.legend()
+
 		ax.axis((
-			1, 12, min(min(y_budget), min(y_income), min(y_expense)) -1000, max(max(y_budget), max(y_income), max(y_expense)) + 1000
+			0, 13, min(min(y_budget), min(y_income), min(y_expense)) -1000, max(max(y_budget), max(y_income), max(y_expense)) + 1000
 		))
+		
+		ax.axhline(y=0., linewidth=1, color='k', ls='--')
+		ax.axhline(y=1000., linewidth=1, color='k', ls='--')
+		if self.config.min_balance:
+			ax.axhline(y=self.config.min_balance, label='Min balance', linewidth=2, color='k', ls='--')
+		ax.legend()
+
+		extremes = (
+			ind(max, y_budget) + ('b', ),
+			ind(min, y_budget) + ('b', ),
+			ind(max, y_expense) + ('r', ),
+			ind(min, y_expense) + ('r', ),
+			ind(max, y_income) + ('g', ),
+			ind(min, y_income) + ('g', ),
+		)
+
+		for i, val, col in extremes:
+			ax.text(i + 0.5, val, '{:.2f}'.format(val), color=col, va='center', ha='center', backgroundcolor='0.9')
+		
 		plt.show()
 
 	def fit_year(self, year, **kwargs):
