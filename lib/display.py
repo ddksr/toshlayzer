@@ -268,4 +268,4 @@ class Plot(Calculation):
 
 	def fit_year(self, year, **kwargs):
 		income, expenses = super().fit_year(year)
-		months, predictions = super().project_year(year, income=income, expenses=expenses **kwargs)
+		months, predictions = super().project_year(year, income=income, expenses=expenses, **kwargs)
