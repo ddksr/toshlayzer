@@ -242,10 +242,10 @@ class Plot(Calculation):
 			if values:
 				overall = prev + sum(values) + planned
 				poz = abs(sum(v for v in values if v > 0) + planned_pos_m[0])
-				neg = abs(sum(v for v in values if v < 0) - planned_neg_m[0])
+				neg = abs(sum(v for v in values if v < 0)) + abs(planned_neg_m[0])
 			else:
 				poz = abs(income if income is not None else predictions[m][1]) + planned_pos_m[0]
-				neg = abs(expenses if expenses is not None else predictions[m][2]) + planned_neg_m[0]
+				neg = abs(expenses if expenses is not None else predictions[m][2]) + abs(planned_neg_m[0])
 				overall = prev + poz - neg + planned
 			
 			y_budget.append(overall)
