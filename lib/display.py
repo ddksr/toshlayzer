@@ -218,7 +218,7 @@ class Plain(Calculation):
 		self.project_year(year, income=income, expenses=expenses)
 
 class Plot(Calculation):
-	def project_year(self, year, **kwargs):
+	def project_year(self, year, income=None, expenses=None, **kwargs):
 		months, predictions = super().project_year(year, **kwargs)
 		
 		x = np.arange(1, 13)
@@ -244,9 +244,9 @@ class Plot(Calculation):
 				poz = abs(sum(v for v in values if v > 0) + planned_pos_m[0])
 				neg = abs(sum(v for v in values if v < 0) - planned_neg_m[0])
 			else:
-				overall = prev + predictions[m][0] + planned
-				poz = predictions[m][1]  + planned_pos_m[0]
-				neg = abs(predictions[m][1]  - planned_neg_m[0])
+				poz = abs(income if income is not None else predictions[m][1])
+				neg = abs(expenses if expenses is not None else predictions[m][2])
+				overall = prev + poz - neg + planned
 			
 			y_budget.append(overall)
 			y_income.append(poz)
@@ -268,4 +268,4 @@ class Plot(Calculation):
 
 	def fit_year(self, year, **kwargs):
 		income, expenses = super().fit_year(year)
-		months, predictions = super().project_year(year, income=income, expenses=expenses, **kwargs)
+		self.project_year(year, income=income, expenses=expenses, **kwargs)
