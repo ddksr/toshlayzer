@@ -262,7 +262,7 @@ class Plot(Calculation):
 		ax.xaxis.set_ticks(np.arange(1, 13))
 		ax.legend()
 		ax.axis((
-			1, 12, -1000, max(max(y_budget), max(y_income), max(y_expense)) + 1000
+			1, 12, min(min(y_budget), min(y_income), min(y_expense)) + 1000 -1000, max(max(y_budget), max(y_income), max(y_expense)) + 1000
 		))
 		plt.show()
 
